@@ -1,10 +1,9 @@
 import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
 import prisma from '../../config/prisma';
 import { env } from '../../config/env';
 import { logger } from '../../config/logger';
 
-function createOAuth2Client(): OAuth2Client {
+function createOAuth2Client() {
   return new google.auth.OAuth2(
     env.google.clientId,
     env.google.clientSecret,
