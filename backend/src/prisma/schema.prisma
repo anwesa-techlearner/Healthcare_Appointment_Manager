@@ -1,0 +1,305 @@
+// This is the Prisma schema for the Healthcare Appointment Manager
+// Tech choice: PostgreSQL for strong transactional/locking support (spec requirement)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  patient
+  doctor
+  admin
+}
+
+enum AppointmentStatus {
+  held
+  confirmed
+  cancelled
+  completed
+}
+
+enum NotificationChannel {
+  email
+  calendar
+}
+
+enum NotificationType {
+  confirmation
+  reminder
+  cancellation
+  no_show
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  failed
+}
+
+enum ReminderStatus {
+  pending
+  sent
+  failed
+}
+
+enum CalendarEventStatus {
+  created
+  updated
+  deleted
+  failed
+}
+
+enum UrgencyLevel {
+  Low
+  Medium
+  High
+  Unknown
+}
+
+enum AuditAction {
+  doctor_created
+  leave_added
+  leave_removed
+  appointment_cancelled
+  appointment_rescheduled
+  doctor_profile_updated
+  user_role_changed
+}
+
+// ─── Core Entities ────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  role          Role
+  name          String
+  phone         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  doctorProfile      DoctorProfile?
+  patientAppointments Appointment[]  @relation("PatientAppointments")
+  refreshTokens       RefreshToken[]
+  calendarEvents      CalendarEvent[]
+  auditLogs           AuditLog[]     @relation("AdminAuditLogs")
+  noShowFollowUps     NoShowFollowUp[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model DoctorProfile {
+  id                  String  @id @default(uuid())
+  userId              String  @unique @map("user_id")
+  specialization      String
+  bio                 String?
+  slotDurationMinutes Int     @default(30) @map("slot_duration_minutes")
+  timezone            String  @default("UTC")
+
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  availability DoctorAvailability[]
+  leaves       DoctorLeave[]
+  appointments Appointment[]
+
+  @@map("doctor_profiles")
+}
+
+model DoctorAvailability {
+  id          String @id @default(uuid())
+  doctorId    String @map("doctor_id")
+  dayOfWeek   Int    @map("day_of_week") // 0=Sunday, 1=Monday ... 6=Saturday
+  startTime   String @map("start_time") // "HH:MM" format
+  endTime     String @map("end_time")   // "HH:MM" format
+
+  doctor DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, dayOfWeek])
+  @@map("doctor_availability")
+}
+
+model DoctorLeave {
+  id       String  @id @default(uuid())
+  doctorId String  @map("doctor_id")
+  date     DateTime
+  reason   String?
+
+  doctor DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, date])
+  @@map("doctor_leaves")
+}
+
+// ─── Appointments ─────────────────────────────────────────────────────────────
+
+model Appointment {
+  id              String            @id @default(uuid())
+  patientId       String            @map("patient_id")
+  doctorId        String            @map("doctor_id")
+  slotStart       DateTime          @map("slot_start")
+  slotEnd         DateTime          @map("slot_end")
+  status          AppointmentStatus @default(held)
+  holdExpiresAt   DateTime?         @map("hold_expires_at")
+  cancelledReason String?           @map("cancelled_reason")
+  idempotencyKey  String?           @unique @map("idempotency_key")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  patient       User               @relation("PatientAppointments", fields: [patientId], references: [id])
+  doctorProfile DoctorProfile      @relation(fields: [doctorId], references: [id])
+  symptoms      Symptom[]
+  visitNote     VisitNote?
+  notifications NotificationLog[]
+  calendarEvents CalendarEvent[]
+  noShowFollowUp NoShowFollowUp?
+  auditLogs     AuditLog[]
+
+  // Unique constraint: only one non-cancelled slot per doctor per time
+  // Enforced at DB level — the application catches the unique violation and rejects
+  @@unique([doctorId, slotStart], name: "unique_doctor_slot")
+  @@index([doctorId, slotStart])
+  @@index([status])
+  @@index([patientId])
+  @@map("appointments")
+}
+
+// ─── Pre-Visit Symptoms ───────────────────────────────────────────────────────
+
+model Symptom {
+  id             String       @id @default(uuid())
+  appointmentId  String       @map("appointment_id")
+  rawText        String       @map("raw_text")
+  aiSummaryJson  Json?        @map("ai_summary_json")
+  urgencyLevel   UrgencyLevel @default(Unknown) @map("urgency_level")
+  aiGenerated    Boolean      @default(false) @map("ai_generated")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@map("symptoms")
+}
+
+// ─── Post-Visit Notes ─────────────────────────────────────────────────────────
+
+model VisitNote {
+  id               String    @id @default(uuid())
+  appointmentId    String    @unique @map("appointment_id")
+  doctorNotes      String    @map("doctor_notes")
+  prescriptionJson Json?     @map("prescription_json")
+  aiPatientSummary String?   @map("ai_patient_summary")
+  aiGenerated      Boolean   @default(false) @map("ai_generated")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  appointment        Appointment          @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  medicationReminders MedicationReminder[]
+
+  @@map("visit_notes")
+}
+
+// ─── Medication Reminders ─────────────────────────────────────────────────────
+
+model MedicationReminder {
+  id              String         @id @default(uuid())
+  visitNoteId     String         @map("visit_note_id")
+  medicationName  String         @map("medication_name")
+  frequency       String         // e.g. "twice daily for 5 days"
+  nextTriggerAt   DateTime       @map("next_trigger_at")
+  status          ReminderStatus @default(pending)
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  visitNote VisitNote @relation(fields: [visitNoteId], references: [id], onDelete: Cascade)
+
+  @@index([nextTriggerAt, status])
+  @@map("medication_reminders")
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model NotificationLog {
+  id            String             @id @default(uuid())
+  appointmentId String             @map("appointment_id")
+  channel       NotificationChannel
+  type          NotificationType
+  status        NotificationStatus @default(pending)
+  attempts      Int                @default(0)
+  lastError     String?            @map("last_error")
+  nextRetryAt   DateTime?          @map("next_retry_at")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextRetryAt])
+  @@map("notification_logs")
+}
+
+// ─── Calendar Events ──────────────────────────────────────────────────────────
+
+model CalendarEvent {
+  id            String              @id @default(uuid())
+  appointmentId String              @map("appointment_id")
+  userId        String              @map("user_id")
+  googleEventId String?             @map("google_event_id")
+  status        CalendarEventStatus @default(created)
+  createdAt     DateTime            @default(now()) @map("created_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@map("calendar_events")
+}
+
+// ─── Bonus: Audit Log ─────────────────────────────────────────────────────────
+
+model AuditLog {
+  id            String      @id @default(uuid())
+  adminId       String      @map("admin_id")
+  action        AuditAction
+  targetId      String?     @map("target_id") // ID of the affected entity
+  details       Json?       // Additional context
+  appointmentId String?     @map("appointment_id")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  admin       User         @relation("AdminAuditLogs", fields: [adminId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─── Bonus: No-Show Tracking ─────────────────────────────────────────────────
+
+model NoShowFollowUp {
+  id            String   @id @default(uuid())
+  appointmentId String   @unique @map("appointment_id")
+  userId        String   @map("user_id") // who no-showed
+  emailSent     Boolean  @default(false) @map("email_sent")
+  rebookingOffered Boolean @default(false) @map("rebooking_offered")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@map("no_show_follow_ups")
+}
