@@ -1,0 +1,47 @@
+services:
+  # Backend API
+  - type: web
+    name: healthcare-appointment-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate --schema=src/prisma/schema.prisma && npm run build
+    startCommand: npx prisma migrate deploy --schema=src/prisma/schema.prisma && node dist/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: USE_CRON_FALLBACK
+        value: "false"
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: EMAIL_FROM_NAME
+        value: "HealthCare Clinic"
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        value: "https://api.openai.com/v1"
+      - key: LLM_MODEL
+        value: "gpt-4o-mini"
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
