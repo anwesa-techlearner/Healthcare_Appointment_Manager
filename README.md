@@ -177,7 +177,41 @@ Double-booking prevention: `UNIQUE(doctor_id, slot_start)` DB constraint + trans
 
 ---
 
-## LLM Prompts (exact)
+## LLM Configuration (Provider-Agnostic)
+
+The backend uses any OpenAI-compatible chat completions API. Switch providers by changing three env vars — no code changes needed.
+
+### Supported providers
+
+| Provider | `LLM_BASE_URL` | `LLM_MODEL` | Free tier |
+|---|---|---|---|
+| **Google Gemini** *(recommended)* | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` | ✅ 10 RPM / 250 RPD |
+| Google Gemini (budget) | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash-lite` | ✅ 15 RPM / 1,000 RPD |
+| Google Gemini (quality) | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-pro` | ✅ 5 RPM / 100 RPD |
+| OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` | ❌ paid |
+| Groq | `https://api.groq.com/openai/v1` | `llama-3.1-8b-instant` | ✅ generous free tier |
+
+### Gemini setup (recommended for free-tier deployments)
+
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey) → **Get API key**
+2. Set these env vars on Render (or in `backend/.env` locally):
+
+```
+LLM_API_KEY=AIza...your_key_here
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+LLM_MODEL=gemini-2.5-flash
+LLM_TIMEOUT_MS=15000
+```
+
+> **Note on the base URL:** The trailing slash is required. Google's OpenAI-compatibility layer sits at `/v1beta/openai/` and the SDK appends `chat/completions` directly.
+
+> **Model note:** `gemini-1.5-flash` and `gemini-2.0-flash` are retired/shut down as of mid-2026. Use `gemini-2.5-flash` or newer. The current stable free-tier models are `gemini-2.5-flash` and `gemini-2.5-flash-lite`.
+
+> **Graceful failure:** If `LLM_API_KEY` is empty or the API is unreachable, all booking and visit workflows continue normally — urgency defaults to `Unknown` and raw notes are stored as the patient summary (`ai_generated: false`).
+
+---
+
+## LLM Prompts (exact, per SPEC §7)
 
 **Pre-visit triage:**
 ```
@@ -189,7 +223,7 @@ Analyse these symptoms and return: urgency level (Low / Medium / High), chief co
 Convert these clinical notes into a patient-friendly summary with medication schedule and follow-up steps: <notes>
 ```
 
-Both calls use `response_format: { type: 'json_object' }` for reliable parsing. On failure, the system degrades gracefully (urgency = Unknown; raw notes returned) — booking is never blocked.
+Both calls use `response_format: { type: 'json_object' }` plus a system prompt enforcing the JSON schema, so responses are reliably parseable across providers.
 
 ---
 
