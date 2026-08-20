@@ -4,7 +4,7 @@ services:
     name: healthcare-appointment-api
     runtime: node
     rootDir: backend
-    buildCommand: npm install && npx prisma generate --schema=src/prisma/schema.prisma && npm run build
+    buildCommand: npm ci && npx prisma generate --schema=src/prisma/schema.prisma && npm run build
     startCommand: npx prisma migrate deploy --schema=src/prisma/schema.prisma && node dist/server.js
     envVars:
       - key: NODE_ENV
