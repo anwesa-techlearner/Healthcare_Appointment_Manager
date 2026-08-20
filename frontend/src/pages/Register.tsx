@@ -23,11 +23,11 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      await register(form);
+      const role = await register(form);
       toast.success('Account created!');
-      navigate('/patient');
+      navigate(`/${role}`, { replace: true });
     } catch (err) {
-      const msg = (err as AxiosError<any>).response?.data?.error ?? 'Registration failed';
+      const msg = (err as AxiosError<{ error?: string }>).response?.data?.error ?? 'Registration failed';
       toast.error(msg);
     } finally {
       setLoading(false);

@@ -4,6 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { AxiosError } from 'axios';
 
+const DASHBOARD: Record<string, string> = {
+  patient: '/patient',
+  doctor: '/doctor',
+  admin: '/admin',
+};
+
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -15,21 +21,12 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(email, password);
+      // login() sets the user in context AND stores tokens in localStorage
+      const role = await login(email, password);
       toast.success('Welcome back!');
-      // Redirect based on role — auth context will have user after login
-      // Use a short delay to let context update
-      setTimeout(() => {
-        const role = JSON.parse(atob(localStorage.getItem('accessToken')!.split('.')[1])).role;
-        const dashboardMap: Record<string, string> = {
-          patient: '/patient',
-          doctor: '/doctor',
-          admin: '/admin',
-        };
-        navigate(dashboardMap[role] ?? '/');
-      }, 100);
+      navigate(DASHBOARD[role] ?? '/', { replace: true });
     } catch (err) {
-      const msg = (err as AxiosError<any>).response?.data?.error ?? 'Login failed';
+      const msg = (err as AxiosError<{ error?: string }>).response?.data?.error ?? 'Login failed';
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -97,7 +94,7 @@ export default function Login() {
           </p>
         </form>
 
-        {/* Demo credentials helper */}
+        {/* Demo credentials */}
         <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm">
           <p className="font-medium text-amber-800 mb-1">Demo accounts</p>
           <ul className="text-amber-700 space-y-0.5">

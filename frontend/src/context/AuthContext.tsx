@@ -18,9 +18,10 @@ interface User {
 interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  // Returns the user's role so callers can redirect without re-reading localStorage
+  login: (email: string, password: string) => Promise<string>;
   logout: () => Promise<void>;
-  register: (data: { email: string; password: string; name: string; phone?: string }) => Promise<void>;
+  register: (data: { email: string; password: string; name: string; phone?: string }) => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -45,14 +46,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  async function login(email: string, password: string): Promise<void> {
+  async function login(email: string, password: string): Promise<string> {
     const res = await authApi.login(email, password);
     const { accessToken, refreshToken } = res.data;
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
 
     const meRes = await authApi.getMe();
-    setUser(meRes.data);
+    const userData: User = meRes.data;
+    setUser(userData);
+    // Return role so the caller can navigate immediately — no setTimeout, no JWT decode
+    return userData.role;
   }
 
   async function logout(): Promise<void> {
@@ -65,10 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
-  async function register(data: { email: string; password: string; name: string; phone?: string }): Promise<void> {
+  async function register(data: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string;
+  }): Promise<string> {
     await authApi.register(data);
-    // After registration, auto-login
-    await login(data.email, data.password);
+    return login(data.email, data.password);
   }
 
   return (
