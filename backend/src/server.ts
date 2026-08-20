@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -58,7 +58,7 @@ app.get(
   '/api/admin/audit-logs',
   authenticate,
   authorize('admin'),
-  async (req, res, next) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const logs = await getAuditLogs(undefined, 200);
       res.json(logs);
@@ -67,7 +67,7 @@ app.get(
 );
 
 // SPEC §8.10 — Health check endpoint
-app.get('/health', async (_req, res) => {
+app.get('/health', async (_req: Request, res: Response) => {
   const [dbOk, redisOk, emailOk, calendarOk] = await Promise.all([
     prisma.$queryRaw`SELECT 1`.then(() => true).catch(() => false),
     checkRedisHealth(),
@@ -89,7 +89,7 @@ app.get('/health', async (_req, res) => {
 });
 
 // 404 handler
-app.use((_req, res) => {
+app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
