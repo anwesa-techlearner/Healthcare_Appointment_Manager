@@ -1,9 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { useAuth } from './context/AuthContext';
 
 // Public pages
+import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -25,19 +25,11 @@ import CreateDoctor from './pages/admin/CreateDoctor';
 import AuditLog from './pages/admin/AuditLog';
 import FailedNotifications from './pages/admin/FailedNotifications';
 
-function RootRedirect() {
-  const { user, isLoading } = useAuth();
-  if (isLoading) return null;
-  if (!user) return <Navigate to="/login" replace />;
-  const dashboardMap = { patient: '/patient', doctor: '/doctor', admin: '/admin' };
-  return <Navigate to={dashboardMap[user.role] ?? '/login'} replace />;
-}
-
 export default function App() {
   return (
     <Routes>
-      {/* Root redirect */}
-      <Route path="/" element={<RootRedirect />} />
+      {/* Homepage — public, no auth required */}
+      <Route path="/" element={<Home />} />
 
       {/* Public routes */}
       <Route path="/login" element={<Login />} />
