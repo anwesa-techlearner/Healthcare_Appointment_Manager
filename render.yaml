@@ -16,7 +16,7 @@ services:
       - key: JWT_REFRESH_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        sync: false
+        value: "https://healthcare-appointment-manager-eight.vercel.app,https://healthcare-appointment-manager-fhwzib6ad-anwesa-s-projects.vercel.app"
       - key: REDIS_URL
         sync: false
       - key: USE_CRON_FALLBACK

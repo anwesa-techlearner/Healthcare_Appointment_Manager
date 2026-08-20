@@ -14,7 +14,12 @@ function optional(key: string, fallback: string): string {
 export const env = {
   port: parseInt(optional('PORT', '4000'), 10),
   nodeEnv: optional('NODE_ENV', 'development'),
+  // Comma-separated list of allowed frontend origins.
+  // e.g. "https://myapp.vercel.app,https://myapp-preview.vercel.app,http://localhost:5173"
   frontendUrl: optional('FRONTEND_URL', 'http://localhost:5173'),
+  get allowedOrigins(): string[] {
+    return this.frontendUrl.split(',').map((u) => u.trim()).filter(Boolean);
+  },
 
   databaseUrl: required('DATABASE_URL'),
 

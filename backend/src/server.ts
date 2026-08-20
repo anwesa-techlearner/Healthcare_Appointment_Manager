@@ -36,7 +36,12 @@ const server = http.createServer(app);
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
 app.use(cors({
-  origin: env.frontendUrl,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    if (env.allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin '${origin}' not allowed`));
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -154,6 +159,7 @@ async function bootstrap() {
 
     server.listen(env.port, () => {
       logger.info(`Server running on port ${env.port} (${env.nodeEnv})`);
+      logger.info(`Allowed CORS origins: ${env.allowedOrigins.join(', ')}`);
       logger.info(`WebSocket server ready at ws://localhost:${env.port}/ws`);
     });
   } catch (err) {
