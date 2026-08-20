@@ -36,9 +36,11 @@ services:
       - key: LLM_API_KEY
         sync: false
       - key: LLM_BASE_URL
-        value: "https://api.openai.com/v1"
+        value: "https://generativelanguage.googleapis.com/v1beta/openai/"
       - key: LLM_MODEL
-        value: "gpt-4o-mini"
+        value: "gemini-2.5-flash"
+      - key: LLM_TIMEOUT_MS
+        value: "15000"
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

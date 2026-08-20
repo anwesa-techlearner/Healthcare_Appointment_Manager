@@ -81,13 +81,28 @@ This ensures CORS allows your frontend to call the API.
 
 ## 7. LLM API Key
 
-The app works with any OpenAI-compatible API:
+The app works with any OpenAI-compatible API. **Gemini is recommended** — free tier, no credit card needed.
 
-- **OpenAI:** Set `LLM_API_KEY=sk-...`, `LLM_BASE_URL=https://api.openai.com/v1`, `LLM_MODEL=gpt-4o-mini`
-- **Groq (free tier):** `LLM_BASE_URL=https://api.groq.com/openai/v1`, `LLM_MODEL=llama3-8b-8192`
-- **Ollama (self-hosted):** `LLM_BASE_URL=http://localhost:11434/v1`
+### Google Gemini (recommended)
 
-If `LLM_API_KEY` is empty, the system runs without AI summaries — all booking flows still work normally.
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey) → **Get API key**
+2. Set on Render:
+   - `LLM_API_KEY=AIza...your_key`
+   - `LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/`
+   - `LLM_MODEL=gemini-2.5-flash`
+   - `LLM_TIMEOUT_MS=15000`
+
+Free tier limits: **10 RPM / 250 requests per day** (more than sufficient for a clinic demo).
+For higher throughput use `gemini-2.5-flash-lite` (15 RPM / 1,000 RPD).
+
+> ⚠️ `gemini-1.5-flash` and `gemini-2.0-flash` are retired as of mid-2026. Use `gemini-2.5-flash` or newer.
+
+### Other providers
+
+- **OpenAI:** `LLM_BASE_URL=https://api.openai.com/v1`, `LLM_MODEL=gpt-4o-mini`
+- **Groq (free tier):** `LLM_BASE_URL=https://api.groq.com/openai/v1`, `LLM_MODEL=llama-3.1-8b-instant`
+
+If `LLM_API_KEY` is empty the system runs without AI summaries — all booking flows still work normally.
 
 ---
 
