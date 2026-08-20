@@ -35,7 +35,7 @@ const server = http.createServer(app);
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
-app.use(cors({
+const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
@@ -43,7 +43,16 @@ app.use(cors({
     callback(new Error(`CORS: origin '${origin}' not allowed`));
   },
   credentials: true,
-}));
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key'],
+};
+
+// Handle OPTIONS preflight FIRST — before any rate limiter or auth middleware
+// This is critical: if rate-limit or error middleware runs before CORS on
+// a preflight, the browser sees a response with no CORS headers and reports
+// it as a CORS error even though the real cause is different.
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(generalLimiter);
 
