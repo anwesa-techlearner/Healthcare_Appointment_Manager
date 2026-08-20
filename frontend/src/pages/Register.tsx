@@ -100,9 +100,8 @@ export default function Register() {
         password: form.password,
       };
       if (form.phone) payload.phone = form.phone;
-      // dateOfBirth and gender are stored as profile notes in the name field for now;
-      // the backend User schema has phone as the only optional field beyond name/email.
-      // These fields are captured and can be added to an extended profile table later.
+      if (form.dateOfBirth) payload.dateOfBirth = form.dateOfBirth;
+      if (form.gender) payload.gender = form.gender;
 
       const role = await register(payload as any);
       toast.success('Account created! Welcome to HealthCare Clinic.');

@@ -13,6 +13,8 @@ export async function registerPatient(data: {
   password: string;
   name: string;
   phone?: string;
+  dateOfBirth?: string; // ISO date string e.g. "1990-05-15"
+  gender?: string;
 }) {
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing) throw new AppError(409, 'Email already registered');
@@ -26,8 +28,19 @@ export async function registerPatient(data: {
       role: Role.patient,
       name: data.name,
       phone: data.phone,
+      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+      gender: data.gender || undefined,
     },
-    select: { id: true, email: true, role: true, name: true, phone: true, createdAt: true },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      name: true,
+      phone: true,
+      dateOfBirth: true,
+      gender: true,
+      createdAt: true,
+    },
   });
 
   return user;
@@ -91,6 +104,8 @@ export async function getUserById(userId: string) {
       role: true,
       name: true,
       phone: true,
+      dateOfBirth: true,
+      gender: true,
       createdAt: true,
       doctorProfile: {
         select: {
