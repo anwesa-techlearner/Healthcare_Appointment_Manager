@@ -11,16 +11,20 @@ import Register from './pages/Register';
 import PatientDashboard from './pages/patient/Dashboard';
 import BookAppointment from './pages/patient/BookAppointment';
 import PatientAppointments from './pages/patient/Appointments';
+import PatientAppointmentDetail from './pages/patient/AppointmentDetail';
 import PatientTimeline from './pages/patient/Timeline';
 
 // Doctor pages
 import DoctorDashboard from './pages/doctor/Dashboard';
+import DoctorAppointmentsList from './pages/doctor/AppointmentsList';
 import DoctorAppointmentDetail from './pages/doctor/AppointmentDetail';
 import DoctorAvailability from './pages/doctor/Availability';
 import DoctorLeaves from './pages/doctor/Leaves';
 
 // Admin pages
 import AdminDashboard from './pages/admin/Dashboard';
+import AdminDoctorsList from './pages/admin/DoctorsList';
+import AdminAppointmentsList from './pages/admin/AppointmentsList';
 import CreateDoctor from './pages/admin/CreateDoctor';
 import AuditLog from './pages/admin/AuditLog';
 import FailedNotifications from './pages/admin/FailedNotifications';
@@ -51,6 +55,11 @@ export default function App() {
           <Layout><PatientAppointments /></Layout>
         </ProtectedRoute>
       } />
+      <Route path="/patient/appointments/:id" element={
+        <ProtectedRoute roles={['patient']}>
+          <Layout><PatientAppointmentDetail /></Layout>
+        </ProtectedRoute>
+      } />
       <Route path="/patient/timeline" element={
         <ProtectedRoute roles={['patient']}>
           <Layout><PatientTimeline /></Layout>
@@ -65,7 +74,7 @@ export default function App() {
       } />
       <Route path="/doctor/appointments" element={
         <ProtectedRoute roles={['doctor']}>
-          <Layout><DoctorDashboard /></Layout>
+          <Layout><DoctorAppointmentsList /></Layout>
         </ProtectedRoute>
       } />
       <Route path="/doctor/appointments/:id" element={
@@ -92,7 +101,7 @@ export default function App() {
       } />
       <Route path="/admin/doctors" element={
         <ProtectedRoute roles={['admin']}>
-          <Layout><AdminDashboard /></Layout>
+          <Layout><AdminDoctorsList /></Layout>
         </ProtectedRoute>
       } />
       <Route path="/admin/doctors/new" element={
@@ -102,7 +111,7 @@ export default function App() {
       } />
       <Route path="/admin/appointments" element={
         <ProtectedRoute roles={['admin']}>
-          <Layout><AdminDashboard /></Layout>
+          <Layout><AdminAppointmentsList /></Layout>
         </ProtectedRoute>
       } />
       <Route path="/admin/notifications" element={
